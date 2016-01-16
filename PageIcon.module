@@ -1,0 +1,100 @@
+<?php
+
+/**
+ * Page Icon
+ * adds an Icon Field (known from advanced template settings) to the settings tab of pages
+ * will overwrite icons set by template and assign a page related icon
+ * module creates a field ProcessPageIcon to hold the data
+ *
+ * made by kixe (Christoph Thelen) 15.01.16
+ * Licensed under GNU/GPL v3
+ * 
+ * ProcessWire 2.x 
+ * Copyright (C) 2015 by Ryan Cramer 
+ * Licensed under GNU/GPL v2, see LICENSE.TXT
+ * 
+ * http://processwire.com
+ *
+ *
+ */
+
+class PageIcon extends Process implements Module {
+
+	public static function getModuleInfo() {
+		return array(
+			'title' => __('Icon'), 
+			'version' => 100, 
+			'summary' => __("Provides an option to assign individual page icon."),
+			'href' => '',
+			'author' => 'kixe',
+			'singular' => true,
+			'autoload' => true, 
+			);
+	}
+
+	/**
+	 * constructor expected by PW 3.x
+	 */
+	public function __construct() {
+	    // intentionally empty
+	}
+
+	/**
+	 * add Hooks to Page::getIcon, ProcessPageEdit::buildFormSettings
+	 *
+	 */
+	public function init() {
+		$this->addHookAfter('Page::getIcon', function($event) {
+			$name = $this->className();
+			$page = $event->object;
+		    if (strlen($page->$name)) $event->return = ltrim(strstr($page->$name,'-'),'-');
+		});
+
+		$this->addHookAfter('ProcessPageEdit::buildFormSettings', function($event) {
+			$name = $this->className();
+			$id = (int) wire('input')->get('id');
+			$page = wire('pages')->get($id);
+			$icon = strlen($page->$name)?$page->$name:null;
+			$field = wire('modules')->get("InputfieldIcon");
+			$field->attr('name', $name);
+			$field->attr('value', $icon);
+			$field->icon = $icon ? $icon : 'puzzle-piece';
+			$field->label = __('Icon');
+			$field->description = __('Select an icon that will be associated with this template and pages using this template (in the admin).');
+			$wrapper = $event->return;
+			$wrapper->add($field);
+			$event->return = $wrapper;
+		});
+	}
+
+	public function ___install() {
+		$field = $this->fields->get($this->className());
+		if (!$field) {
+			$field = new Field();
+	        $field->type = $this->modules->get("FieldtypeText");
+	        $field->name = $this->className();
+	        $field->label = $this->_('Icon');
+	        $field->addFlag(4); // make global
+	        // $field->addFlag(32); // add access control
+	        // $field->addFlag(64); // make frontend API accessible
+	        $field->collapsed = 4; // make invisible under content tab
+	        $field->description = $this->_('Field used by Module').' '.$this->className();
+	        $field->save();
+	    }
+	}
+
+	public function ___uninstall() {
+		$field = $this->fields->get($this->className());
+		if ($field) {
+			$field->removeFlag(4);
+			$field->removeFlag(32);
+			$field->save();
+			foreach ($this->templates as $template) {
+				if (!$template->fieldgroup->hasField($field)) continue;
+				$template->fieldgroup->remove($field);
+				$template->fieldgroup->save();
+			}
+			$this->fields->delete($field);
+		}
+	}
+}
