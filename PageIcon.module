@@ -23,7 +23,7 @@ class PageIcon extends Process implements Module {
 	public static function getModuleInfo() {
 		return array(
 			'title' => __('Icon'), 
-			'version' => 100, 
+			'version' => 101, 
 			'summary' => __("Provides an option to assign individual page icon."),
 			'href' => '',
 			'author' => 'kixe',
@@ -60,7 +60,7 @@ class PageIcon extends Process implements Module {
 			$field->attr('value', $icon);
 			$field->icon = $icon ? $icon : 'puzzle-piece';
 			$field->label = __('Icon');
-			$field->description = __('Select an icon that will be associated with this template and pages using this template (in the admin).');
+			$field->description = __('Select an icon that will be associated with this page and will overwrite the icon set by template (advanced settings).');
 			$wrapper = $event->return;
 			$wrapper->add($field);
 			$event->return = $wrapper;
