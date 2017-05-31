@@ -23,7 +23,7 @@ class PageIcon extends Process implements Module {
 	public static function getModuleInfo() {
 		return array(
 			'title' => __('Icon'), 
-			'version' => 101, 
+			'version' => 102, 
 			'summary' => __("Provides an option to assign individual page icon."),
 			'href' => '',
 			'author' => 'kixe',
@@ -74,9 +74,7 @@ class PageIcon extends Process implements Module {
 	        $field->type = $this->modules->get("FieldtypeText");
 	        $field->name = $this->className();
 	        $field->label = $this->_('Icon');
-	        $field->addFlag(4); // make global
-	        // $field->addFlag(32); // add access control
-	        // $field->addFlag(64); // make frontend API accessible
+	        $field->set('flags', 29); // add flags: autojoin, global, system, permanent
 	        $field->collapsed = 4; // make invisible under content tab
 	        $field->description = $this->_('Field used by Module').' '.$this->className();
 	        $field->save();
@@ -86,9 +84,10 @@ class PageIcon extends Process implements Module {
 	public function ___uninstall() {
 		$field = $this->fields->get($this->className());
 		if ($field) {
-			$field->removeFlag(4);
-			$field->removeFlag(32);
+			$field->addFlag(32768); // flagSystemOverride - needed to allow to remove system flags
+			$field->set('flags', 0);
 			$field->save();
+			// remove from all fieldgroups
 			foreach ($this->templates as $template) {
 				if (!$template->fieldgroup->hasField($field)) continue;
 				$template->fieldgroup->remove($field);
