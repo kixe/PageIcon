@@ -15,6 +15,9 @@
  * 
  * http://processwire.com
  *
+ * @version 1.0.4
+ * @since 1.0.3 - renamed field to get the icon if process icon is missing @see AdminThemeFrameWork::getPageIcon() expects fieldname page_icon instead of PageIcon
+ * @since 1.0.4 - workaround for PW bug #1002 remove icon prefix
  *
  */
 
@@ -23,7 +26,7 @@ class PageIcon extends Process implements Module {
 	public static function getModuleInfo() {
 		return array(
 			'title' => __('Icon'), 
-			'version' => 102, 
+			'version' => 104, 
 			'summary' => __("Provides an option to assign individual page icon."),
 			'href' => '',
 			'author' => 'kixe',
@@ -45,22 +48,30 @@ class PageIcon extends Process implements Module {
 	 */
 	public function init() {
 		$this->addHookAfter('Page::getIcon', function($event) {
-			$name = $this->className();
 			$page = $event->object;
-		    if (strlen($page->$name)) $event->return = ltrim(strstr($page->$name,'-'),'-');
+		    if (strpos($page->page_icon, InputfieldIcon::prefix) === 0) $event->return = substr($page->page_icon, strlen(InputfieldIcon::prefix));
+		    else if ($page->page_icon) $event->return = $page->page_icon;
+		});
+
+		// we save the page_icon without the prefix, fixes PW bug #1002
+		$this->addHookBefore('Pages::saveReady', function($e) {
+			$page = $e->arguments[0];
+			if (strpos($page->page_icon, InputfieldIcon::prefix) === 0) $page->page_icon = substr($page->page_icon, strlen(InputfieldIcon::prefix));
 		});
 
 		$this->addHookAfter('ProcessPageEdit::buildFormSettings', function($event) {
-			$name = $this->className();
+			// $name = $this->className();
+			$name = 'page_icon';
 			$id = (int) wire('input')->get('id');
 			$page = wire('pages')->get($id);
-			$icon = strlen($page->$name)?$page->$name:null;
+			$icon = strlen($page->$name)? $page->$name : null;
 			$field = wire('modules')->get("InputfieldIcon");
+			$field->set('prefixValue', false); // no effect PW bug #1002
 			$field->attr('name', $name);
 			$field->attr('value', $icon);
 			$field->icon = $icon ? $icon : 'puzzle-piece';
 			$field->label = __('Icon');
-			$field->description = __('Select an icon that will be associated with this page and will overwrite the icon set by template (advanced settings).');
+			$field->description = __('Select an icon that will be associated with this page. If defined, the corresponding template icon will be overwritten.');
 			$wrapper = $event->return;
 			$wrapper->add($field);
 			$event->return = $wrapper;
