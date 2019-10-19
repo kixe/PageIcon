@@ -1,7 +1,15 @@
 Page Icon
 =========
 
-+ Provides option to set an individual icon to each page
-+ adds an Icon Field to the settings tab of pages
-+ hook will overwrite icon set by template and assign the page related icon
-+ module creates a field ProcessPageIcon to hold the data and assign it to all templates The field is not shown under content tab and only accessible via page settings tab.
+## Description
++ The module allows to assign page related icons (font awesome) shown in the backend.  
+	If a template or process related icon is set it will be overwritten.
++ During install the module creates a field **page_icon** where the data is stored and assign it to all templates.
++ An *InputfieldIcon* will be shown under the Settings tab in the page edit area and can only be accessed from here. The field does not appear on the Content tab.
+
+---
+
+## Good to know
++ The icon is shown in the page tree via a hook in `Page::getIcon()`
++ The page property **page_icon** is known by *ProcessList* (since PW 3.0.143) and *AdminThemeFramework*
++ To provide the option to add an icon to pages using a template with the **noGlobal** flag (e.g. admin, language), the corresponding field must be added manually.
