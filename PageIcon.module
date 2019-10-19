@@ -1,4 +1,4 @@
-<?php
+<?php namespace ProcessWire;
 
 /**
  * Page Icon
@@ -15,9 +15,11 @@
  * 
  * http://processwire.com
  *
- * @version 1.0.4
+ * @version 1.0.5
  * @since 1.0.3 - renamed field to get the icon if process icon is missing @see AdminThemeFrameWork::getPageIcon() expects fieldname page_icon instead of PageIcon
- * @since 1.0.4 - workaround for PW bug #1002 remove icon prefix
+ * @since 1.0.4 - remove icon prefix for storage
+ * @since 1.0.5 - added pw namespace, moved field name to const fieldName
+ *
  *
  */
 
@@ -25,8 +27,8 @@ class PageIcon extends Process implements Module {
 
 	public static function getModuleInfo() {
 		return array(
-			'title' => __('Icon'), 
-			'version' => 104, 
+			'title' => __('Page Icon'), 
+			'version' => 105, 
 			'summary' => __("Provides an option to assign individual page icon."),
 			'href' => '',
 			'author' => 'kixe',
@@ -34,6 +36,8 @@ class PageIcon extends Process implements Module {
 			'autoload' => true, 
 			);
 	}
+
+	const fieldName = 'page_icon';
 
 	/**
 	 * constructor expected by PW 3.x
@@ -43,35 +47,33 @@ class PageIcon extends Process implements Module {
 	}
 
 	/**
-	 * add Hooks to Page::getIcon, ProcessPageEdit::buildFormSettings
+	 * add Hooks to Page::getIcon, Pages::saveReady, ProcessPageEdit::buildFormSettings
 	 *
 	 */
 	public function init() {
 		$this->addHookAfter('Page::getIcon', function($event) {
 			$page = $event->object;
-		    if (strpos($page->page_icon, InputfieldIcon::prefix) === 0) $event->return = substr($page->page_icon, strlen(InputfieldIcon::prefix));
-		    else if ($page->page_icon) $event->return = $page->page_icon;
+		    if (strpos($page->{self::fieldName}, InputfieldIcon::prefix) === 0) $event->return = substr($page->{self::fieldName}, strlen(InputfieldIcon::prefix));
+		    else if ($page->{self::fieldName}) $event->return = $page->{self::fieldName};
 		});
 
-		// we save the page_icon without the prefix, fixes PW bug #1002
+		// we save the page icon without the prefix
 		$this->addHookBefore('Pages::saveReady', function($e) {
 			$page = $e->arguments[0];
-			if (strpos($page->page_icon, InputfieldIcon::prefix) === 0) $page->page_icon = substr($page->page_icon, strlen(InputfieldIcon::prefix));
+			if (strpos($page->{self::fieldName}, InputfieldIcon::prefix) === 0) $page->{self::fieldName} = substr($page->{self::fieldName}, strlen(InputfieldIcon::prefix));
 		});
 
 		$this->addHookAfter('ProcessPageEdit::buildFormSettings', function($event) {
-			// $name = $this->className();
-			$name = 'page_icon';
 			$id = (int) wire('input')->get('id');
 			$page = wire('pages')->get($id);
-			$icon = strlen($page->$name)? $page->$name : null;
+			if ($page->template->hasField(self::fieldName) === false) return;
+			$icon = strlen($page->{self::fieldName})? $page->{self::fieldName} : null;
 			$field = wire('modules')->get("InputfieldIcon");
-			$field->set('prefixValue', false); // no effect PW bug #1002
-			$field->attr('name', $name);
+			$field->attr('name', self::fieldName);
 			$field->attr('value', $icon);
 			$field->icon = $icon ? $icon : 'puzzle-piece';
 			$field->label = __('Icon');
-			$field->description = __('Select an icon that will be associated with this page. If defined, the corresponding template icon will be overwritten.');
+			$field->description = __('Select an icon that will be associated with this page. If defined, the corresponding template or process (module) icon will be overwritten.');
 			$wrapper = $event->return;
 			$wrapper->add($field);
 			$event->return = $wrapper;
@@ -79,21 +81,22 @@ class PageIcon extends Process implements Module {
 	}
 
 	public function ___install() {
-		$field = $this->fields->get($this->className());
+		$field = $this->fields->get(self::fieldName);
 		if (!$field) {
 			$field = new Field();
 	        $field->type = $this->modules->get("FieldtypeText");
-	        $field->name = $this->className();
+	        $field->name = self::fieldName;
 	        $field->label = $this->_('Icon');
 	        $field->set('flags', 29); // add flags: autojoin, global, system, permanent
 	        $field->collapsed = 4; // make invisible under content tab
 	        $field->description = $this->_('Field used by Module').' '.$this->className();
+	        $field->notes = $this->_('This field is global and has been assigned to all templates during the module installation process. If you also want to use it with noGlobal-templates (e.g. admin, language), it should be added manually.');
 	        $field->save();
 	    }
 	}
 
 	public function ___uninstall() {
-		$field = $this->fields->get($this->className());
+		$field = $this->fields->get(self::fieldName);
 		if ($field) {
 			$field->addFlag(32768); // flagSystemOverride - needed to allow to remove system flags
 			$field->set('flags', 0);
