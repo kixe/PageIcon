@@ -4,7 +4,7 @@
  * Page Icon
  * adds an Icon Field (known from advanced template settings) to the settings tab of pages
  * will overwrite icons set by template and assign a page related icon
- * module creates a field ProcessPageIcon to hold the data
+ * module creates a field 'page_icon' to hold the data
  *
  * made by kixe (Christoph Thelen) 15.01.16
  * Licensed under GNU/GPL v3
