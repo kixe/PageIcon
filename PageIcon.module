@@ -15,10 +15,12 @@
  * 
  * http://processwire.com
  *
- * @version 1.0.5
+ * @version 1.0.6
+ * 
  * @since 1.0.3 - renamed field to get the icon if process icon is missing @see AdminThemeFrameWork::getPageIcon() expects fieldname page_icon instead of PageIcon
  * @since 1.0.4 - remove icon prefix for storage
  * @since 1.0.5 - added pw namespace, moved field name to const fieldName
+ * @since 1.0.6 - fixed PHP 8.2 bug strpos(null) 2024-04-06
  *
  *
  */
@@ -28,7 +30,7 @@ class PageIcon extends Process implements Module {
 	public static function getModuleInfo() {
 		return array(
 			'title' => __('Page Icon'), 
-			'version' => 105, 
+			'version' => 106, 
 			'summary' => __("Provides an option to assign individual page icon."),
 			'href' => '',
 			'author' => 'kixe',
@@ -53,14 +55,14 @@ class PageIcon extends Process implements Module {
 	public function init() {
 		$this->addHookAfter('Page::getIcon', function($event) {
 			$page = $event->object;
-		    if (strpos($page->{self::fieldName}, InputfieldIcon::prefix) === 0) $event->return = substr($page->{self::fieldName}, strlen(InputfieldIcon::prefix));
+		    if ($page->{self::fieldName} && strpos($page->{self::fieldName}, InputfieldIcon::prefix) === 0) $event->return = substr($page->{self::fieldName}, strlen(InputfieldIcon::prefix));
 		    else if ($page->{self::fieldName}) $event->return = $page->{self::fieldName};
 		});
 
 		// we save the page icon without the prefix
 		$this->addHookBefore('Pages::saveReady', function($e) {
 			$page = $e->arguments[0];
-			if (strpos($page->{self::fieldName}, InputfieldIcon::prefix) === 0) $page->{self::fieldName} = substr($page->{self::fieldName}, strlen(InputfieldIcon::prefix));
+			if ($page->{self::fieldName} && strpos($page->{self::fieldName}, InputfieldIcon::prefix) === 0) $page->{self::fieldName} = substr($page->{self::fieldName}, strlen(InputfieldIcon::prefix));
 		});
 
 		$this->addHookAfter('ProcessPageEdit::buildFormSettings', function($event) {
